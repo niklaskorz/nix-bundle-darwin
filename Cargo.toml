@@ -1,0 +1,7 @@
+[package]
+name = "nix-bundle-darwin"
+version = "0.1.0"
+edition = "2021"
+license = "EUPL-1.2-or-later"
+
+[dependencies]
