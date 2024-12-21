@@ -70,9 +70,9 @@ fn bundle_application(app_path: &Path, results_path: &Path, force: bool) -> Resu
             );
         }
     }
-    recursive_writable_copy(app_path, &target_path)?;
-    let dependencies = nix::get_dependencies(app_path)?;
     let target_store = target_path.join("Contents").join("nix");
+    recursive_writable_copy(app_path, &target_path, &target_store)?;
+    let dependencies = nix::get_dependencies(app_path)?;
     fs::create_dir_all(&target_store)?;
     copy_dependencies(&dependencies, &target_store)?;
     Ok(())
