@@ -6,7 +6,7 @@ use clap::Parser;
 use copy::{copy_dependencies, recursive_writable_copy};
 use std::{fs, path::Path};
 
-/// Simple program to greet a person
+/// A darwin-compatible alternative to nix-bundle
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
