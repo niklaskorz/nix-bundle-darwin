@@ -72,6 +72,11 @@ fn bundle_application(app_path: &Path, results_path: &Path, force: bool) -> Resu
         }
     }
     let target_store = target_path.join("Contents").join("nix");
+    println!(
+        "Copying app and dependencies from {} to {}",
+        target_path.display(),
+        app_path.display()
+    );
     recursive_writable_copy(app_path, &target_path, &target_store)?;
     Ok(())
 }

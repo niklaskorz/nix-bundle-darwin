@@ -103,7 +103,6 @@ fn copy_path(src_path: &Path, dst_path: &Path, target_store: &Path) -> Result<()
             .context(format!("nix store path deps for {}", src_path.display()))?
         {
             let dst_path = dependency_path(&dep, target_store)?;
-            println!("Dep:\n- {}\n- {}", dep.display(), dst_path.display());
             if dep.try_exists()? {
                 copy_path(&dep, &dst_path, target_store)?;
             }
