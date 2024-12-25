@@ -1,10 +1,11 @@
 mod copy;
+mod macho;
 mod nix;
 mod paths;
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
-use copy::{copy_dependencies, recursive_writable_copy};
+use copy::recursive_writable_copy;
 use std::{fs, path::Path};
 
 /// A darwin-compatible alternative to nix-bundle

@@ -1,4 +1,5 @@
 use std::os::unix::fs::PermissionsExt;
+use std::str::FromStr;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -6,6 +7,7 @@ use std::{
 
 use anyhow::{Context, Result};
 
+use crate::macho::{add_rpath, change_library_path, is_mach_object};
 use crate::paths::get_nix_store_paths;
 
 const NIX_STORE: &'static str = "/nix/store";
@@ -98,13 +100,26 @@ fn copy_path(src_path: &Path, dst_path: &Path, target_store: &Path) -> Result<()
         permissions.set_mode(permissions.mode() | 0b010000000);
         fs::set_permissions(&dst_path, permissions)?;
 
+        let is_macho = is_mach_object(&src_path);
+        if is_macho {
+            let rel_store = pathdiff::diff_paths(target_store, parent)
+                .context("could not determine relative path")?;
+            let rpath = PathBuf::from_str("@loader_path")?.join(rel_store);
+            add_rpath(&dst_path, &rpath)?;
+        }
+
         // Copy all dependencies from nix store
         for dep in get_nix_store_paths(src_path)
             .context(format!("nix store path deps for {}", src_path.display()))?
         {
-            let dst_path = dependency_path(&dep, target_store)?;
+            let dep_dst = dependency_path(&dep, target_store)?;
             if dep.try_exists()? {
-                copy_path(&dep, &dst_path, target_store)?;
+                copy_path(&dep, &dep_dst, target_store)?;
+                if is_macho {
+                    let rpath_store = PathBuf::from_str("@rpath")?;
+                    let rpath_dep = dependency_path(&dep, &rpath_store)?;
+                    change_library_path(&dst_path, &dep, &rpath_dep)?;
+                }
             }
         }
     }
