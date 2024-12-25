@@ -74,7 +74,11 @@ fn copy_path(src_path: &Path, dst_path: &Path, target_store: &Path) -> Result<()
                 dst_path.display(),
                 rel_link_target.display(),
             ))?;
-            copy_path(&link_target, &dep_path, target_store)?;
+            if link_target.is_dir() {
+                recursive_writable_copy(&link_target, &dep_path, target_store)?;
+            } else {
+                copy_path(&link_target, &dep_path, target_store)?;
+            }
         } else {
             symlink(&link_target, dst_path).context(format!(
                 "symlinking {} to {}",
