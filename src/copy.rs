@@ -6,6 +6,8 @@ use std::{
 
 use anyhow::{Context, Result};
 
+use crate::paths::get_nix_store_paths;
+
 const NIX_STORE: &'static str = "/nix/store";
 const NIX_HASH_LEN: usize = 32;
 
@@ -39,45 +41,70 @@ pub(crate) fn recursive_writable_copy(
         let entry_path = entry.path();
         let rel_path = entry_path.strip_prefix(src_dir)?;
         let dst_path = dst_dir.join(rel_path);
+        copy_path(entry_path, &dst_path, target_store)?;
+    }
+    Ok(())
+}
 
-        let file_type = entry.file_type();
-        if file_type.is_symlink() {
-            let mut real_path = entry_path.read_link()?;
-            if real_path.starts_with(NIX_STORE) {
-                let dep_path = dependency_path(&real_path, target_store)?;
-                real_path =
-                    pathdiff::diff_paths(dep_path, &dst_path.parent().context("no parent dir")?)
-                        .context("could not determine relative path")?;
-            }
-            println!(
-                "Symlinking {} to {}",
+fn copy_path(src_path: &Path, dst_path: &Path, target_store: &Path) -> Result<()> {
+    if dst_path.try_exists().unwrap() {
+        return Ok(());
+    }
+    let src_md = fs::symlink_metadata(src_path)?;
+    if !(src_md.is_file() || src_md.is_symlink()) {
+        return Ok(());
+    }
+    let parent = dst_path
+        .parent()
+        .context("cannot copy to path without parent")?;
+    if !parent.is_dir() {
+        fs::create_dir_all(parent)
+            .context(format!("creating parent directory {}", parent.display()))?;
+    }
+
+    if src_md.is_symlink() {
+        use std::os::unix::fs::symlink;
+        let link_target = src_path.canonicalize()?;
+        if link_target.starts_with(NIX_STORE) {
+            let dep_path = dependency_path(&link_target, target_store)?;
+            let rel_link_target = pathdiff::diff_paths(&dep_path, parent)
+                .context("could not determine relative path")?;
+            symlink(&rel_link_target, dst_path).context(format!(
+                "symlinking {} to {}",
                 dst_path.display(),
-                real_path.display(),
-            );
-            std::os::unix::fs::symlink(real_path, dst_path)?;
-            continue;
-        }
-
-        if file_type.is_dir() {
-            println!("Creating dir {}", dst_path.display());
-            if !dst_path.is_dir() {
-                fs::create_dir(&dst_path)?;
-            }
-        } else if file_type.is_file() {
-            println!(
-                "Copying file {} to {}",
-                entry_path.display(),
-                dst_path.display()
-            );
-            fs::copy(entry_path, &dst_path)?;
+                rel_link_target.display(),
+            ))?;
+            copy_path(&link_target, &dep_path, target_store)?;
         } else {
-            println!("Neither file or directory, skipping");
-            continue;
-        };
-        let mut permissions = fs::metadata(entry_path)?.permissions();
+            symlink(&link_target, dst_path).context(format!(
+                "symlinking {} to {}",
+                dst_path.display(),
+                link_target.display(),
+            ))?;
+        }
+    } else if src_md.is_file() {
+        fs::copy(src_path, &dst_path).context(format!(
+            "copying file {} to {}",
+            src_path.display(),
+            dst_path.display(),
+        ))?;
+
+        let mut permissions = src_md.permissions();
         // Make owner-writable (similar to chmod u+w)
         permissions.set_mode(permissions.mode() | 0b010000000);
         fs::set_permissions(&dst_path, permissions)?;
+
+        // Copy all dependencies from nix store
+        for dep in get_nix_store_paths(src_path)
+            .context(format!("nix store path deps for {}", src_path.display()))?
+        {
+            let dst_path = dependency_path(&dep, target_store)?;
+            println!("Dep:\n- {}\n- {}", dep.display(), dst_path.display());
+            if dep.try_exists()? {
+                copy_path(&dep, &dst_path, target_store)?;
+            }
+        }
     }
+
     Ok(())
 }

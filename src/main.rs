@@ -1,5 +1,6 @@
 mod copy;
 mod nix;
+mod paths;
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
@@ -72,8 +73,5 @@ fn bundle_application(app_path: &Path, results_path: &Path, force: bool) -> Resu
     }
     let target_store = target_path.join("Contents").join("nix");
     recursive_writable_copy(app_path, &target_path, &target_store)?;
-    let dependencies = nix::get_dependencies(app_path)?;
-    fs::create_dir_all(&target_store)?;
-    copy_dependencies(&dependencies, &target_store)?;
     Ok(())
 }
