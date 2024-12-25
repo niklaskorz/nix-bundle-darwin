@@ -8,7 +8,7 @@ use grep::{
 };
 
 pub(crate) fn get_nix_store_paths(file_path: &Path) -> Result<Vec<PathBuf>> {
-    let matcher = RegexMatcher::new(r"/nix/store/[a-zA-Z0-9/.\-_ \\]+")?;
+    let matcher = RegexMatcher::new(r"/nix/store/[a-zA-Z0-9/.\-_\\]+")?;
     let mut matches: Vec<PathBuf> = vec![];
     SearcherBuilder::new()
         .binary_detection(BinaryDetection::convert(0))
