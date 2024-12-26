@@ -1,6 +1,7 @@
 use std::{fs::File, io::Read, path::Path, process::Command};
 
 use anyhow::{bail, Result};
+use schnauzer::LcVariant;
 
 pub(crate) fn is_mach_object(path: &Path) -> bool {
     let Ok(file) = File::open(path) else {
@@ -16,6 +17,20 @@ pub(crate) fn is_mach_object(path: &Path) -> bool {
         && buffer[2] == 0xED
         && buffer[1] == 0xFA
         && (buffer[0] == 0xCE || buffer[0] == 0xCF)
+}
+
+pub(crate) fn get_dylibs(macho_path: &Path) -> Result<Vec<String>> {
+    let parser = schnauzer::Parser::build(&macho_path)?.parse()?;
+    let dylibs: Vec<String> = parser
+        .mach_objects()
+        .iter()
+        .flat_map(|o| o.load_commands_iterator())
+        .flat_map(|cmd| match cmd.variant {
+            LcVariant::LoadDylib(dylib) => dylib.name.load_string().ok(),
+            _ => None,
+        })
+        .collect();
+    Ok(dylibs)
 }
 
 pub(crate) fn add_rpath(macho_path: &Path, rpath: &Path) -> Result<()> {
