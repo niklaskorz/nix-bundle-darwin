@@ -99,9 +99,9 @@ fn copy_path(src_path: &Path, dst_path: &Path, target_store: &Path) -> Result<()
         permissions.set_mode(permissions.mode() | 0b010000000);
         fs::set_permissions(&dst_path, permissions)?;
 
-        let is_macho = is_mach_object(&src_path);
-        if is_macho {
+        if is_mach_object(&src_path) {
             let mut changes = vec![];
+
             // Copy all dependencies from nix store
             for dep in get_dylibs(&dst_path)? {
                 let dep_src: PathBuf = dep.into();
@@ -115,10 +115,12 @@ fn copy_path(src_path: &Path, dst_path: &Path, target_store: &Path) -> Result<()
                 changes.push((dep_src, rpath_dep));
             }
 
-            let rel_store = pathdiff::diff_paths(target_store, parent)
-                .context("could not determine relative path")?;
-            let rpath = PathBuf::from_str("@loader_path")?.join(rel_store);
-            add_rpath_and_change_libraries(&dst_path, &rpath, changes)?;
+            if !changes.is_empty() {
+                let rel_store = pathdiff::diff_paths(target_store, parent)
+                    .context("could not determine relative path")?;
+                let rpath = PathBuf::from_str("@loader_path")?.join(rel_store);
+                add_rpath_and_change_libraries(&dst_path, &rpath, changes)?;
+            }
         }
     }
 
