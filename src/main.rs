@@ -4,42 +4,73 @@ mod nix;
 mod paths;
 
 use anyhow::{bail, Context, Result};
-use clap::Parser;
+use clap::{Args, Parser};
 use copy::recursive_writable_copy;
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 /// A darwin-compatible alternative to nix-bundle
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-struct Args {
-    /// Flake installable to bundle, e.g., nixpkgs#hello
-    #[arg(long)]
-    flake: String,
+struct Parameters {
+    /// What to bundle, interpretation depends on mode.  
+    /// Default: must be a path, defaults to "default.nix";
+    /// --flake: must be a flake installable, defaults to ".#default";
+    /// --program: must be a program name, no default value.
+    target: Option<String>,
+
+    #[command(flatten)]
+    mode: Mode,
 
     /// Overwrite existing bundles
     #[arg(short, long, default_value_t = false)]
     force: bool,
 }
 
+#[derive(Args, Debug)]
+#[group(multiple = false)]
+struct Mode {
+    /// Which attribute path of TARGET to build
+    #[arg(short = 'A', long)]
+    attr: Option<String>,
+
+    /// Treat TARGET as program, e.g., teeworlds
+    #[arg(short, long, default_value_t = false, requires = "target")]
+    program: bool,
+
+    /// Treat TARGET as flake installable, e.g., nixpkgs#teeworlds
+    #[arg(short = 'F', long, default_value_t = false)]
+    flake: bool,
+}
+
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let args = Parameters::parse();
+    let outputs = if args.mode.flake {
+        let installable = args.target.as_deref().unwrap_or(".#default");
+        println!("Building {installable}");
+        nix::build_flake(installable)?
+    } else if args.mode.program {
+        let program = args.target.unwrap();
+        println!("Building {program}");
+        let nixpkgs = nix::find_file("nixpkgs/default.nix")?;
+        nix::build(&nixpkgs, Some(&program))?
+    } else {
+        let target = args.target.as_deref().unwrap_or("default.nix");
+        println!("Building {target}");
+        let path: PathBuf = target.into();
+        nix::build(&path, args.mode.attr.as_deref())?
+    };
 
     let results_path = std::env::current_dir()?.join("results");
     std::fs::create_dir_all(&results_path)?;
 
-    println!("Building {}", args.flake);
-    nix::build(&args.flake)?;
-    let derivations = nix::get_derivation_metas(&args.flake)?;
-    for drv in derivations.values() {
-        println!("Bundling {}", drv.name);
-        let output = drv
-            .outputs
-            .get("bin")
-            .or(drv.outputs.get("out"))
-            .context("no bin or out outputs found")?;
-        println!("Source: {}", output.path.display());
+    for output in outputs {
+        println!("Looking for applications in {output}");
 
-        let applications_dir = output.path.join("Applications");
+        let applications_dir = PathBuf::from_str(&output)?.join("Applications");
         if applications_dir.is_dir() {
             println!("Source contains applications");
             for entry in fs::read_dir(&applications_dir)? {
