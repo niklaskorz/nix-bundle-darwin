@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::{Context, Result};
 
-use crate::macho::{add_rpath, change_library_path, get_dylibs, is_mach_object};
+use crate::macho::{add_rpath_and_change_libraries, get_dylibs, is_mach_object};
 
 const NIX_STORE: &'static str = "/nix/store";
 const NIX_HASH_LEN: usize = 32;
@@ -101,11 +101,7 @@ fn copy_path(src_path: &Path, dst_path: &Path, target_store: &Path) -> Result<()
 
         let is_macho = is_mach_object(&src_path);
         if is_macho {
-            let rel_store = pathdiff::diff_paths(target_store, parent)
-                .context("could not determine relative path")?;
-            let rpath = PathBuf::from_str("@loader_path")?.join(rel_store);
-            add_rpath(&dst_path, &rpath)?;
-
+            let mut changes = vec![];
             // Copy all dependencies from nix store
             for dep in get_dylibs(&dst_path)? {
                 let dep_src: PathBuf = dep.into();
@@ -116,8 +112,13 @@ fn copy_path(src_path: &Path, dst_path: &Path, target_store: &Path) -> Result<()
                 copy_path(&dep_src, &dep_dst, target_store)?;
                 let rpath_store = PathBuf::from_str("@rpath")?;
                 let rpath_dep = dependency_path(&dep_src, &rpath_store)?;
-                change_library_path(&dst_path, &dep_src, &rpath_dep)?;
+                changes.push((dep_src, rpath_dep));
             }
+
+            let rel_store = pathdiff::diff_paths(target_store, parent)
+                .context("could not determine relative path")?;
+            let rpath = PathBuf::from_str("@loader_path")?.join(rel_store);
+            add_rpath_and_change_libraries(&dst_path, &rpath, changes)?;
         }
     }
 

@@ -27,6 +27,7 @@ fn main() -> Result<()> {
     let results_path = std::env::current_dir()?.join("results");
     std::fs::create_dir_all(&results_path)?;
 
+    println!("Building {}", args.flake);
     nix::build(&args.flake)?;
     let derivations = nix::get_derivation_metas(&args.flake)?;
     for drv in derivations.values() {
