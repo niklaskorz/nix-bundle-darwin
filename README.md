@@ -19,7 +19,7 @@ Example: `cargo run --release -- --flake nixpkgs#zed-editor`
 ## Not yet working
 
 - Any Electron app (vscodium, vesktop, ...)
-- Anything relying on Nix store paths 
+- Anything relying on Nix store paths besides symlinks and shared libraries
 
 ## License
 
