@@ -30,5 +30,6 @@ EUPL-1.2-or-later
 - Written in Rust instead of shell scripts
 - Does not require `sudo`
 - Compatible with flakes
-- Unrestricted app location (nix-bundle-macos requires apps to be in `/Applications/`)
+- Shallow copies dependencies from Nix store for smaller bundle size – nix-bundle-macos copies whole store directories based on a nix-store query, resulting in huge bundles
+- Unrestricted app location – nix-bundle-macos requires apps to be in `/Applications/`
 - Planned: codesign support
