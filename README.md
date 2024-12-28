@@ -5,21 +5,20 @@ A darwin-compatible alternative to [nix-bundle](https://github.com/nix-community
 ## Usage
 
 ```
-Usage: nix-bundle-darwin [OPTIONS] [TARGET]
+Usage: nix-bundle-darwin [OPTIONS] [INSTALLABLES]...
 
 Arguments:
-  [TARGET]  What to bundle, interpretation depends on mode. Default: must be a path, defaults to "default.nix"; --flake: must be a flake installable, defaults to ".#default"; --program: must be a program name, no default value
+  [INSTALLABLES]...  What to bundle. Installables that resolve to derivations are built (or substituted if possible). Store path installables are substituted
 
 Options:
-  -A, --attr <ATTR>  Which attribute path of TARGET to build
-  -p, --program      Treat TARGET as program, e.g., teeworlds
-  -F, --flake        Treat TARGET as flake installable, e.g., nixpkgs#teeworlds
-  -f, --force        Overwrite existing bundles
+  -f, --file <FILE>  Interpret installables as attribute paths relative to the Nix expression stored in <FILE>
+  -p, --programs     Interpret installables as nixpkgs programs
+      --force        Overwrite existing bundles
   -h, --help         Print help
   -V, --version      Print version
 ```
 
-Example: `cargo run --release -- --flake nixpkgs#zed-editor`
+Example: `nix-bundle-darwin nixpkgs#zed-editor`
 
 ## Confirmed working
 

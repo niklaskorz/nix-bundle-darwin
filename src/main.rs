@@ -16,58 +16,65 @@ use std::{
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Parameters {
-    /// What to bundle, interpretation depends on mode.  
-    /// Default: must be a path, defaults to "default.nix";
-    /// --flake: must be a flake installable, defaults to ".#default";
-    /// --program: must be a program name, no default value.
-    target: Option<String>,
+    /// What to bundle.
+    /// Installables that resolve to derivations are built (or substituted if possible).
+    /// Store path installables are substituted.
+    installables: Vec<String>,
 
     #[command(flatten)]
     mode: Mode,
 
     /// Overwrite existing bundles
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
     force: bool,
 }
 
 #[derive(Args, Debug)]
 #[group(multiple = false)]
 struct Mode {
-    /// Which attribute path of TARGET to build
-    #[arg(short = 'A', long)]
-    attr: Option<String>,
+    /// Interpret installables as attribute paths relative to the Nix expression stored in <FILE>.
+    #[arg(short, long)]
+    file: Option<String>,
 
-    /// Treat TARGET as program, e.g., teeworlds
-    #[arg(short, long, default_value_t = false, requires = "target")]
-    program: bool,
-
-    /// Treat TARGET as flake installable, e.g., nixpkgs#teeworlds
-    #[arg(short = 'F', long, default_value_t = false)]
-    flake: bool,
+    /// Interpret installables as nixpkgs programs
+    #[arg(short, long, default_value_t = false, requires = "installables")]
+    programs: bool,
 }
 
 fn main() -> Result<()> {
     let args = Parameters::parse();
-    let outputs = if args.mode.flake {
-        let installable = args.target.as_deref().unwrap_or(".#default");
-        println!("Building {installable}");
-        nix::build_flake(installable)?
-    } else if args.mode.program {
-        let program = args.target.unwrap();
-        println!("Building {program}");
-        let nixpkgs = nix::find_file("nixpkgs/default.nix")?;
-        nix::build(&nixpkgs, Some(&program))?
+    let path: Option<PathBuf> = if args.mode.programs {
+        Some(nix::find_file("nixpkgs/default.nix")?)
     } else {
-        let target = args.target.as_deref().unwrap_or("default.nix");
-        println!("Building {target}");
-        let path: PathBuf = target.into();
-        nix::build(&path, args.mode.attr.as_deref())?
+        args.mode.file.map(|f| f.into())
     };
+    let mut outputs = vec![];
+    if let Some(path) = path {
+        if args.installables.is_empty() {
+            println!("Building {}", path.display());
+            outputs.push(nix::build(&path, None)?);
+        } else {
+            for installable in args.installables {
+                println!("Building {installable}");
+                outputs.push(nix::build(&path, Some(&installable))?);
+            }
+        }
+    } else {
+        if args.installables.is_empty() {
+            println!("Building .#default");
+            outputs.push(nix::build_flake(".#default")?);
+        } else {
+            for installable in args.installables {
+                println!("Building {installable}");
+                outputs.push(nix::build_flake(&installable)?);
+            }
+        }
+    }
 
     let results_path = std::env::current_dir()?.join("results");
     std::fs::create_dir_all(&results_path)?;
 
-    for output in outputs {
+    for output in outputs.iter().flatten() {
         println!("Looking for applications in {output}");
 
         let applications_dir = PathBuf::from_str(&output)?.join("Applications");
