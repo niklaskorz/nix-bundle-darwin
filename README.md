@@ -5,7 +5,18 @@ A darwin-compatible alternative to [nix-bundle](https://github.com/nix-community
 ## Usage
 
 ```
-cargo run --release -- --flake <installable> [--force]
+Usage: nix-bundle-darwin [OPTIONS] [TARGET]
+
+Arguments:
+  [TARGET]  What to bundle, interpretation depends on mode. Default: must be a path, defaults to "default.nix"; --flake: must be a flake installable, defaults to ".#default"; --program: must be a program name, no default value
+
+Options:
+  -A, --attr <ATTR>  Which attribute path of TARGET to build
+  -p, --program      Treat TARGET as program, e.g., teeworlds
+  -F, --flake        Treat TARGET as flake installable, e.g., nixpkgs#teeworlds
+  -f, --force        Overwrite existing bundles
+  -h, --help         Print help
+  -V, --version      Print version
 ```
 
 Example: `cargo run --release -- --flake nixpkgs#zed-editor`
