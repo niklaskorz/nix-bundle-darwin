@@ -4,6 +4,7 @@ mod nix;
 mod paths;
 
 use anyhow::{bail, Context, Result};
+use apple_codesign::{BundleSigner, SigningSettings};
 use clap::{Args, Parser};
 use copy::recursive_writable_copy;
 use std::{
@@ -27,6 +28,10 @@ struct Parameters {
     /// Overwrite existing bundles
     #[arg(long, default_value_t = false)]
     force: bool,
+
+    /// Selfsign the resulting application bundles
+    #[arg(short, long, default_value_t = false)]
+    sign: bool,
 }
 
 #[derive(Args, Debug)]
@@ -84,7 +89,7 @@ fn main() -> Result<()> {
                 let entry = entry?;
                 let path = entry.path();
                 if path.is_dir() && path.extension().is_some_and(|ext| ext == "app") {
-                    bundle_application(&path, &results_path, args.force)?;
+                    bundle_application(&path, &results_path, args.force, args.sign)?;
                 }
             }
         }
@@ -93,7 +98,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn bundle_application(app_path: &Path, results_path: &Path, force: bool) -> Result<()> {
+fn bundle_application(app_path: &Path, results_path: &Path, force: bool, sign: bool) -> Result<()> {
     println!("Bundling application {}", app_path.display());
     let app_name = app_path.file_name().context("cannot determine app name")?;
     let target_path = results_path.join(app_name);
@@ -118,5 +123,14 @@ fn bundle_application(app_path: &Path, results_path: &Path, force: bool) -> Resu
         target_path.display(),
     );
     recursive_writable_copy(app_path, &target_path, &target_store)?;
+
+    if sign {
+        println!("Signing {}", target_path.display());
+        let settings = SigningSettings::default();
+        let mut signer = BundleSigner::new_from_path(&target_path)?;
+        signer.collect_nested_bundles()?;
+        signer.write_signed_bundle(&target_path, &settings)?;
+    }
+
     Ok(())
 }

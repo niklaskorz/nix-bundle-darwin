@@ -6,6 +6,7 @@ license = "EUPL-1.2-or-later"
 
 [dependencies]
 anyhow = "1.0.94"
+apple-codesign = "0.29.0"
 clap = { version = "4.5.23", features = ["derive"] }
 grep = "0.3.2"
 pathdiff = "0.2.3"

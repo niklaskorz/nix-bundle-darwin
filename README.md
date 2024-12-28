@@ -14,6 +14,7 @@ Options:
   -f, --file <FILE>  Interpret installables as attribute paths relative to the Nix expression stored in <FILE>
   -p, --programs     Interpret installables as nixpkgs programs
       --force        Overwrite existing bundles
+  -s, --sign         Selfsign the resulting application bundles
   -h, --help         Print help
   -V, --version      Print version
 ```
@@ -42,4 +43,4 @@ EUPL-1.2-or-later
 - Compatible with flakes
 - Shallow copies dependencies from Nix store for smaller bundle size – nix-bundle-macos copies whole store directories based on a nix-store query, resulting in huge bundles
 - Unrestricted app location – nix-bundle-macos requires apps to be in `/Applications/`
-- Planned: codesign support
+- Supports codesigning (currently only selfsign)
