@@ -11,6 +11,9 @@ pkgs.mkShell {
     nixfmt-rfc-style
   ];
 
+  # Required by rust-analyzer
+  RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+
   INSTALL_NAME_TOOL =
     if pkgs.stdenv.hostPlatform.isDarwin then
       "${pkgs.cctools}/bin/install_name_tool"
