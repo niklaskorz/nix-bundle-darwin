@@ -8,6 +8,13 @@ use std::{
 use anyhow::{bail, Result};
 use schnauzer::LcVariant;
 
+// May be set at compile time to use LLVM's variant or to harcode an absolute path
+// into the binary, so we don't need a wrapper for our Nix package.
+const INSTALL_NAME_TOOL: &'static str = match option_env!("INSTALL_NAME_TOOL") {
+    Some(v) => v,
+    None => "install_name_tool",
+};
+
 pub(crate) fn is_mach_object(path: &Path) -> bool {
     let Ok(file) = File::open(path) else {
         return false;
@@ -43,7 +50,7 @@ pub(crate) fn add_rpath_and_change_libraries(
     rpath: &Path,
     changes: Vec<(PathBuf, PathBuf)>,
 ) -> Result<()> {
-    let mut command = Command::new("install_name_tool");
+    let mut command = Command::new(INSTALL_NAME_TOOL);
     for (from, to) in changes {
         command.arg("-change").arg(from).arg(to);
     }
