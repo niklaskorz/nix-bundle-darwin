@@ -5,14 +5,15 @@ A darwin-compatible alternative to [nix-bundle](https://github.com/nix-community
 ## Usage
 
 ```
-Usage: nix-bundle-darwin [OPTIONS] [INSTALLABLES]...
+Usage: nix-bundle-darwin [OPTIONS] [INSTALLABLES]... [-- <BUILD_ARGS>...]
 
 Arguments:
   [INSTALLABLES]...  What to bundle. Installables that resolve to derivations are built (or substituted if possible). Store path installables are substituted
+  [BUILD_ARGS]...    Additional arguments to pass to `nix build`
 
 Options:
-  -f, --file <FILE>  Interpret installables as attribute paths relative to the Nix expression stored in <FILE>
-  -p, --programs     Interpret installables as nixpkgs programs
+  -f, --file <FILE>  Interpret installables as attribute paths of the Nix expression stored in <FILE>
+  -p, --programs     Interpret installables as nixpkgs programs, equivalent to `--file <nixpkgs>`
       --force        Overwrite existing bundles
   -s, --sign         Selfsign the resulting application bundles
   -h, --help         Print help
