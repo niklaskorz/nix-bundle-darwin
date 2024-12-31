@@ -54,12 +54,12 @@ fn main() -> Result<()> {
     if let Some(file) = args.mode.file {
         args.build_args.extend(["--file".into(), file]);
     }
-    let outputs = nix::build(args.installables, args.build_args);
+    let outputs = nix::build(args.installables, args.build_args)?;
 
     let results_path = std::env::current_dir()?.join("results");
     std::fs::create_dir_all(&results_path)?;
 
-    for output in outputs.iter().flatten() {
+    for output in outputs {
         println!("Looking for applications in {}", output.display());
 
         let applications_dir = output.join("Applications");
