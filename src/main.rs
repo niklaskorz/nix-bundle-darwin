@@ -32,49 +32,33 @@ struct Parameters {
     /// Selfsign the resulting application bundles
     #[arg(short, long, default_value_t = false)]
     sign: bool,
+
+    /// Additional arguments to pass to `nix build`
+    #[arg(last = true)]
+    build_args: Vec<String>,
 }
 
 #[derive(Args, Debug)]
 #[group(multiple = false)]
 struct Mode {
-    /// Interpret installables as attribute paths relative to the Nix expression stored in <FILE>.
+    /// Interpret installables as attribute paths of the Nix expression stored in <FILE>.
     #[arg(short, long)]
     file: Option<String>,
 
-    /// Interpret installables as nixpkgs programs
+    /// Interpret installables as nixpkgs programs, equivalent to `--file <nixpkgs>`
     #[arg(short, long, default_value_t = false, requires = "installables")]
     programs: bool,
 }
 
 fn main() -> Result<()> {
-    let args = Parameters::parse();
-    let path: Option<PathBuf> = if args.mode.programs {
-        Some(nix::find_file("nixpkgs/default.nix")?)
-    } else {
-        args.mode.file.map(|f| f.into())
-    };
-    let mut outputs = vec![];
-    if let Some(path) = path {
-        if args.installables.is_empty() {
-            println!("Building {}", path.display());
-            outputs.push(nix::build(&path, None)?);
-        } else {
-            for installable in args.installables {
-                println!("Building {installable}");
-                outputs.push(nix::build(&path, Some(&installable))?);
-            }
-        }
-    } else {
-        if args.installables.is_empty() {
-            println!("Building .#default");
-            outputs.push(nix::build_flake(".#default")?);
-        } else {
-            for installable in args.installables {
-                println!("Building {installable}");
-                outputs.push(nix::build_flake(&installable)?);
-            }
-        }
+    let mut args = Parameters::parse();
+    if args.mode.programs {
+        args.mode.file = Some("<nixpkgs>".into());
     }
+    if let Some(file) = args.mode.file {
+        args.build_args.extend(["--file".into(), file]);
+    }
+    let outputs = nix::build(args.installables, args.build_args);
 
     let results_path = std::env::current_dir()?.join("results");
     std::fs::create_dir_all(&results_path)?;
