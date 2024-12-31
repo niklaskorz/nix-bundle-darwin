@@ -10,21 +10,6 @@ use anyhow::{Context, Result};
 use crate::macho::{add_rpath_and_change_libraries, get_dylibs, is_mach_object};
 
 const NIX_STORE: &'static str = "/nix/store";
-const NIX_HASH_LEN: usize = 32;
-
-pub(crate) fn copy_dependencies(deps: &Vec<PathBuf>, target_store: &Path) -> Result<()> {
-    for src_dir in deps {
-        copy_dependency(src_dir, target_store)?;
-    }
-    Ok(())
-}
-
-fn copy_dependency(src_dir: &Path, target_store: &Path) -> Result<()> {
-    let dst_dir = dependency_path(src_dir, target_store)?;
-    recursive_writable_copy(src_dir, &dst_dir, target_store)?;
-
-    Ok(())
-}
 
 fn dependency_path(src_path: &Path, target_store: &Path) -> Result<PathBuf> {
     let dst_name = src_path.strip_prefix(NIX_STORE)?;

@@ -7,11 +7,7 @@ use anyhow::{bail, Context, Result};
 use apple_codesign::{BundleSigner, SigningSettings};
 use clap::{Args, Parser};
 use copy::recursive_writable_copy;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::{fs, path::Path};
 
 /// A darwin-compatible alternative to nix-bundle
 #[derive(Parser, Debug)]
@@ -64,9 +60,9 @@ fn main() -> Result<()> {
     std::fs::create_dir_all(&results_path)?;
 
     for output in outputs.iter().flatten() {
-        println!("Looking for applications in {output}");
+        println!("Looking for applications in {}", output.display());
 
-        let applications_dir = PathBuf::from_str(&output)?.join("Applications");
+        let applications_dir = output.join("Applications");
         if applications_dir.is_dir() {
             println!("Source contains applications");
             for entry in fs::read_dir(&applications_dir)? {

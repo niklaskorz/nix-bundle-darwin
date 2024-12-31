@@ -2536,8 +2536,6 @@ dependencies = [
  "pathdiff",
  "regex",
  "schnauzer",
- "serde",
- "serde_json",
  "walkdir",
 ]
 
