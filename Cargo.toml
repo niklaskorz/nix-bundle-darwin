@@ -5,7 +5,7 @@ edition = "2021"
 license = "EUPL-1.2-or-later"
 
 [dependencies]
-anyhow = "1.0.94"
+anyhow = "1.0.95"
 apple-codesign = "0.29.0"
 clap = { version = "4.5.23", features = ["derive"] }
 grep = "0.3.2"
