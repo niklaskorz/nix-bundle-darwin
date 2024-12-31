@@ -2534,7 +2534,6 @@ dependencies = [
  "clap",
  "grep",
  "pathdiff",
- "regex",
  "schnauzer",
  "walkdir",
 ]
